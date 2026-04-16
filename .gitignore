@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+build/
+client/dist/
+server/dist/
+
+# Hardhat generated
+blockchain/cache/
+blockchain/artifacts/
+blockchain/typechain-types/
+
+# Uploads
+server/uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
