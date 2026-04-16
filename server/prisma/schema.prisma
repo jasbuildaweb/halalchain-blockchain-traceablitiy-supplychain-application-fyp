@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  SUPPLIER
+  MANUFACTURER
+  LOGISTICS
+  RETAILER
+  CONSUMER
+}
+
+enum HalalStatus {
+  PENDING
+  CERTIFIED
+  REJECTED
+  REVOKED
+  EXPIRED
+}
+
+enum EventType {
+  RAW_MATERIAL_ADDED
+  MANUFACTURING_STARTED
+  MANUFACTURING_COMPLETE
+  QUALITY_CHECK_PASSED
+  SHIPPED
+  IN_TRANSIT
+  RECEIVED_AT_WAREHOUSE
+  DELIVERED_TO_RETAILER
+  AVAILABLE_FOR_SALE
+}
+
+// ─── Models ─────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          Role      @default(CONSUMER)
+  walletAddress String?   @unique
+  company       String?
+  isApproved    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  products           Product[]
+  certificates       Certificate[]        @relation("IssuedBy")
+  supplyChainEvents  SupplyChainEvent[]
+  rawMaterials       RawMaterial[]
+
+  @@map("users")
+}
+
+model Product {
+  id               String      @id @default(cuid())
+  productId        String      @unique  // bytes32 hex — on-chain key
+  name             String
+  description      String?
+  category         String?
+  ingredients      String[]
+  images           String[]
+  isHalalCertified Boolean     @default(false)
+  halalStatus      HalalStatus @default(PENDING)
+  txHash           String?     // tx that registered it on-chain
+  blockNumber      Int?
+  qrCodeUrl        String?
+
+  manufacturer     User        @relation(fields: [manufacturerId], references: [id])
+  manufacturerId   String
+
+  certificate      Certificate?
+  supplyChainEvents SupplyChainEvent[]
+  rawMaterials     ProductRawMaterial[]
+
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@map("products")
+}
+
+model Certificate {
+  id               String      @id @default(cuid())
+  certificateId    String      @unique  // bytes32 hex — on-chain key
+  issuingBody      String      // e.g. "JAKIM", "MUI"
+  documentUrl      String?     // uploaded PDF/image
+  issuedAt         DateTime    @default(now())
+  expiresAt        DateTime
+  isValid          Boolean     @default(true)
+  revocationReason String?
+  txHash           String?
+  blockNumber      Int?
+
+  product          Product     @relation(fields: [productId], references: [id])
+  productId        String      @unique
+
+  issuedBy         User        @relation("IssuedBy", fields: [issuedById], references: [id])
+  issuedById       String
+
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@map("certificates")
+}
+
+model SupplyChainEvent {
+  id           String    @id @default(cuid())
+  eventId      String    @unique  // bytes32 hex — on-chain key
+  eventType    EventType
+  location     String
+  notes        String?
+  txHash       String?
+  blockNumber  Int?
+  logIndex     Int?
+  timestamp    DateTime  @default(now())
+
+  product      Product   @relation(fields: [productId], references: [id])
+  productId    String
+
+  actor        User      @relation(fields: [actorId], references: [id])
+  actorId      String
+
+  createdAt    DateTime  @default(now())
+
+  @@map("supply_chain_events")
+}
+
+model RawMaterial {
+  id           String      @id @default(cuid())
+  name         String
+  origin       String?
+  halalStatus  HalalStatus @default(PENDING)
+  certRef      String?     // reference to external certificate
+
+  supplier     User        @relation(fields: [supplierId], references: [id])
+  supplierId   String
+
+  products     ProductRawMaterial[]
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@map("raw_materials")
+}
+
+// Junction table: product ↔ raw material
+model ProductRawMaterial {
+  product        Product     @relation(fields: [productId], references: [id])
+  productId      String
+  rawMaterial    RawMaterial @relation(fields: [rawMaterialId], references: [id])
+  rawMaterialId  String
+  quantity       String?
+  unit           String?
+
+  @@id([productId, rawMaterialId])
+  @@map("product_raw_materials")
+}

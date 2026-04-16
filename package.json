@@ -1,0 +1,19 @@
+{
+  "name": "halal-supply-chain",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "blockchain",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev:client":     "npm run dev --workspace=client",
+    "dev:server":     "npm run dev --workspace=server",
+    "chain":          "npm run node --workspace=blockchain",
+    "chain:deploy":   "npm run deploy --workspace=blockchain",
+    "chain:seed":     "npm run seed --workspace=blockchain",
+    "db:migrate":     "npm run db:migrate --workspace=server",
+    "db:seed":        "npm run db:seed --workspace=server"
+  }
+}
