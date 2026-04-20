@@ -1,35 +1,30 @@
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
-  LayoutDashboard, Package, Truck, ShoppingBag, Users,
-  FileCheck, LogOut, Leaf, Factory, ScanLine, Menu, X
+  LayoutDashboard, Package, Users,
+  FileCheck, LogOut, Leaf, ScanLine, Menu
 } from "lucide-react";
 import { Role } from "../../types";
 import { useState } from "react";
 
 const ROLE_NAV: Record<Role, { label: string; to: string; icon: typeof LayoutDashboard }[]> = {
   ADMIN: [
-    { label: "Overview",     to: "/dashboard/admin",              icon: LayoutDashboard },
-    { label: "Users",        to: "/dashboard/admin/users",         icon: Users },
-    { label: "Certificates", to: "/dashboard/admin/certificates",  icon: FileCheck },
-    { label: "Products",     to: "/dashboard/admin/products",      icon: Package },
+    { label: "Overview",     to: "/dashboard/admin",                  icon: LayoutDashboard },
+    { label: "Users",        to: "/dashboard/admin?tab=users",        icon: Users },
+    { label: "Certificates", to: "/dashboard/admin?tab=certificates", icon: FileCheck },
+    { label: "Products",     to: "/dashboard/admin?tab=products",     icon: Package },
   ],
   SUPPLIER: [
-    { label: "Dashboard",      to: "/dashboard/supplier",         icon: LayoutDashboard },
-    { label: "Raw Materials",  to: "/dashboard/supplier/materials", icon: Leaf },
+    { label: "Dashboard", to: "/dashboard/supplier",     icon: Leaf },
   ],
   MANUFACTURER: [
-    { label: "Dashboard", to: "/dashboard/manufacturer",         icon: LayoutDashboard },
-    { label: "Products",  to: "/dashboard/manufacturer/products", icon: Package },
-    { label: "Register",  to: "/dashboard/manufacturer/new",      icon: Factory },
+    { label: "Dashboard", to: "/dashboard/manufacturer", icon: Package },
   ],
   LOGISTICS: [
-    { label: "Dashboard",  to: "/dashboard/logistics",          icon: LayoutDashboard },
-    { label: "Shipments",  to: "/dashboard/logistics/shipments", icon: Truck },
+    { label: "Dashboard", to: "/dashboard/logistics",    icon: LayoutDashboard },
   ],
   RETAILER: [
-    { label: "Dashboard",   to: "/dashboard/retailer",           icon: LayoutDashboard },
-    { label: "Inventory",   to: "/dashboard/retailer/inventory",  icon: ShoppingBag },
+    { label: "Dashboard", to: "/dashboard/retailer",     icon: LayoutDashboard },
   ],
   CONSUMER: [
     { label: "Scan QR", to: "/scan", icon: ScanLine },
@@ -58,7 +53,18 @@ export default function DashboardLayout() {
     navigate("/login");
   };
 
-  const SidebarContent = () => (
+  const SidebarContent = () => {
+    const loc = useLocation();
+
+    const isNavActive = (to: string) => {
+      if (to.includes("?")) {
+        const [path, qs] = to.split("?");
+        return loc.pathname === path && loc.search === `?${qs}`;
+      }
+      return loc.pathname === to && !loc.search.includes("tab=");
+    };
+
+    return (
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className={`${roleColor} px-6 py-5`}>
@@ -83,19 +89,17 @@ export default function DashboardLayout() {
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
+          const active = isNavActive(item.to);
           return (
             <NavLink
               key={item.to}
               to={item.to}
-              end
               onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-green-50 text-green-700"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                }`
-              }
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                active
+                  ? "bg-green-50 text-green-700"
+                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+              }`}
             >
               <Icon size={18} />
               {item.label}
@@ -124,6 +128,7 @@ export default function DashboardLayout() {
       </div>
     </div>
   );
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">

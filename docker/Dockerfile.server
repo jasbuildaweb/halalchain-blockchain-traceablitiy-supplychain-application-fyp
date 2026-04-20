@@ -1,0 +1,30 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# openssl is required by Prisma on Alpine
+RUN apk add --no-cache openssl
+
+# ── Copy workspace manifests first for layer caching ─────────────────────────
+COPY package*.json          ./
+COPY blockchain/package.json ./blockchain/
+COPY server/package.json    ./server/
+COPY client/package.json    ./client/
+
+RUN npm install
+
+# ── Copy source ───────────────────────────────────────────────────────────────
+COPY server/   ./server/
+# Blockchain folder is needed so blockchain.ts can resolve
+# ../../../blockchain/deployments/localhost.json at runtime
+COPY blockchain/ ./blockchain/
+
+# Pre-generate Prisma client against the schema
+RUN cd server && npx prisma generate
+
+# ── Entrypoint ────────────────────────────────────────────────────────────────
+COPY docker/server-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 5000
+
+ENTRYPOINT ["/entrypoint.sh"]

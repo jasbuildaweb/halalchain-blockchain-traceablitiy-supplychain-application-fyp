@@ -1,0 +1,32 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# curl is needed for the health check polling loop
+RUN apk add --no-cache curl
+
+# ── Copy workspace manifests first for layer caching ─────────────────────────
+COPY package*.json          ./
+COPY blockchain/package.json ./blockchain/
+COPY server/package.json    ./server/
+COPY client/package.json    ./client/
+
+# Install all workspace dependencies (hoisted to root node_modules)
+RUN npm install
+
+# ── Copy blockchain source ────────────────────────────────────────────────────
+COPY blockchain/ ./blockchain/
+
+# Pre-compile Solidity contracts during build (faster first startup)
+RUN cd blockchain && npx hardhat compile
+
+# ── Entrypoint ────────────────────────────────────────────────────────────────
+COPY docker/blockchain-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 8545
+
+# Health check passes only after contracts are deployed and seed is done
+HEALTHCHECK --interval=5s --timeout=3s --retries=60 \
+  CMD test -f /deployed || exit 1
+
+ENTRYPOINT ["/entrypoint.sh"]

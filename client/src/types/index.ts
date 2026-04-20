@@ -71,7 +71,7 @@ export interface Product {
 }
 
 export interface VerifyResponse {
-  product: Omit<Product, "certificate" | "supplyChainEvents">;
+  product: Omit<Product, "certificate" | "supplyChainEvents"> & { registeredAt: string };
   halal: {
     isHalalCertified: boolean;
     dbStatus: HalalStatus;

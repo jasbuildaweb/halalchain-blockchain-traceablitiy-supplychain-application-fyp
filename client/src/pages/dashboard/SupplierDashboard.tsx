@@ -24,7 +24,7 @@ export default function SupplierDashboard() {
 
   const recordEvent = useMutation({
     mutationFn: () => api.post("/events", { ...eventForm, eventType: "RAW_MATERIAL_ADDED" as EventType }),
-    onSuccess: () => { toast.success("Event recorded on blockchain!"); setEventForm({ productId: "", location: "", notes: "" }); },
+    onSuccess: () => { toast.success("Event recorded on blockchain!"); qc.invalidateQueries({ queryKey: ["products-all"] }); setEventForm({ productId: "", location: "", notes: "" }); },
     onError: (err: unknown) => toast.error((err as { response?: { data?: { error?: string } } }).response?.data?.error ?? "Failed"),
   });
 

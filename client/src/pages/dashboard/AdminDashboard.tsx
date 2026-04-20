@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Users, FileCheck, Package, Plus, Trash2, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
@@ -8,7 +9,9 @@ import { User, Product, Certificate } from "../../types";
 type Tab = "overview" | "users" | "certificates" | "products";
 
 export default function AdminDashboard() {
-  const [tab, setTab] = useState<Tab>("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = (searchParams.get("tab") ?? "overview") as Tab;
+  const setTab = (t: Tab) => setSearchParams(t === "overview" ? {} : { tab: t });
   const qc = useQueryClient();
 
   const { data: users }    = useQuery({ queryKey: ["users"],        queryFn: () => api.get("/users").then(r => r.data.data as User[]) });
@@ -27,7 +30,7 @@ export default function AdminDashboard() {
   const revokeCert = useMutation({
     mutationFn: (id: string) => api.delete(`/certificates/${id}`, { data: { reason: "Revoked by admin" } }),
     onSuccess: () => { toast.success("Certificate revoked"); qc.invalidateQueries({ queryKey: ["certificates"] }); qc.invalidateQueries({ queryKey: ["products"] }); },
-    onError: () => toast.error("Failed to revoke"),
+    onError: (err: unknown) => toast.error((err as { response?: { data?: { error?: string } } }).response?.data?.error ?? "Failed to revoke"),
   });
 
   // Approve user
@@ -78,7 +81,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Pending approvals */}
-          {users?.filter(u => !u.isApproved).length! > 0 && (
+          {(users?.filter(u => !u.isApproved) ?? []).length > 0 && (
             <div className="card border-amber-200 bg-amber-50">
               <h2 className="font-semibold text-amber-800 mb-3">⏳ Pending Approvals</h2>
               {users?.filter(u => !u.isApproved).map(u => (
@@ -133,7 +136,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="label">Product</label>
-                <select className="input" value={certForm.productId} onChange={e => setCertForm(f => ({ ...f, productId: e.target.value }))}>
+                <select className="input" value={certForm.productId} onChange={e => setCertForm({ ...certForm, productId: e.target.value })}>
                   <option value="">Select product…</option>
                   {products?.filter(p => !p.isHalalCertified).map(p => (
                     <option key={p.id} value={p.id}>{p.name}</option>
@@ -142,13 +145,13 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <label className="label">Issuing Body</label>
-                <select className="input" value={certForm.issuingBody} onChange={e => setCertForm(f => ({ ...f, issuingBody: e.target.value }))}>
+                <select className="input" value={certForm.issuingBody} onChange={e => setCertForm({ ...certForm, issuingBody: e.target.value })}>
                   {["JAKIM","MUI","SIRIM","HDC","IFANCA","ESMA"].map(b => <option key={b}>{b}</option>)}
                 </select>
               </div>
               <div>
                 <label className="label">Expiry Date</label>
-                <input type="date" className="input" value={certForm.expiresAt} onChange={e => setCertForm(f => ({ ...f, expiresAt: e.target.value }))} />
+                <input type="date" className="input" value={certForm.expiresAt} onChange={e => setCertForm({ ...certForm, expiresAt: e.target.value })} />
               </div>
             </div>
             <button

@@ -1,0 +1,82 @@
+version: "3.9"
+
+# ─── One-command startup ──────────────────────────────────────────────────────
+# docker compose up --build
+#
+# Start order (enforced by health checks):
+#   postgres → hardhat (node + deploy + seed) → server → client
+#
+# Access the app at: http://localhost:3000
+
+services:
+
+  # ── 1. PostgreSQL ────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB:       halal_chain
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d halal_chain"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── 2. Hardhat node + contract deployment ────────────────────────────────────
+  hardhat:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.blockchain
+    volumes:
+      # Shared volume: deploy.ts writes localhost.json here,
+      # the server container reads it from the same path
+      - deployments:/app/blockchain/deployments
+    ports:
+      - "8545:8545"     # expose so you can use Hardhat console locally if needed
+    healthcheck:
+      # Only passes after deploy.ts + seed.ts have finished
+      test: ["CMD", "test", "-f", "/deployed"]
+      interval: 5s
+      timeout: 3s
+      retries: 60       # up to 5 minutes for first-time compilation
+
+  # ── 3. Express API server ────────────────────────────────────────────────────
+  server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.server
+    environment:
+      DATABASE_URL:          postgresql://postgres:password@postgres:5432/halal_chain
+      JWT_SECRET:            halalchain-docker-jwt-secret-do-not-use-in-prod
+      DEPLOYER_PRIVATE_KEY:  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+      RPC_URL:               http://hardhat:8545
+      PORT:                  "5000"
+      CLIENT_URL:            http://localhost:3000
+    volumes:
+      - deployments:/app/blockchain/deployments:ro   # read localhost.json
+      - uploads:/app/server/uploads                  # persist QR code images
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      hardhat:
+        condition: service_healthy
+
+  # ── 4. React client (built + served by nginx) ────────────────────────────────
+  client:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.client
+    ports:
+      - "3000:80"
+    depends_on:
+      - server
+
+volumes:
+  postgres_data:   # persists the database between restarts
+  deployments:     # shared: hardhat writes, server reads localhost.json
+  uploads:         # persists generated QR code images

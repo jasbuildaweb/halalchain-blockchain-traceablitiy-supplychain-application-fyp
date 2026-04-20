@@ -1,0 +1,24 @@
+# Dependencies — reinstalled inside the image
+**/node_modules
+
+# Environment file — env vars come from docker-compose.yml instead
+server/.env
+
+# Blockchain build artifacts — recompiled during image build
+blockchain/artifacts
+blockchain/cache
+blockchain/typechain-types
+
+# Previous deployment — fresh deploy happens at container startup
+blockchain/deployments
+
+# Client build output — rebuilt during image build
+client/dist
+
+# Git and editor
+.git
+.gitignore
+**/.DS_Store
+
+# Test results
+coverage

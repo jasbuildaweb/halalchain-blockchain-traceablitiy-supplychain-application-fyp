@@ -96,15 +96,12 @@ export default function SupplyChainTimeline({ events, chainIntegrity, onChainEve
                 {event.txHash && (
                   <div className="mt-3 flex items-center gap-2">
                     <span className="badge-green text-xs">✓ On Blockchain</span>
-                    <a
-                      href={`http://localhost:8545`}
+                    <span
                       title={event.txHash}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-blue-600 hover:underline font-mono"
+                      className="text-xs text-gray-500 font-mono"
                     >
                       {event.txHash.slice(0, 12)}…{event.txHash.slice(-8)}
-                    </a>
+                    </span>
                     {event.blockNumber && (
                       <span className="text-xs text-gray-400">Block #{event.blockNumber}</span>
                     )}

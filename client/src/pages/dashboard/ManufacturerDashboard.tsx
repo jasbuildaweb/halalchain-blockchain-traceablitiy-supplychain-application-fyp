@@ -138,7 +138,7 @@ export default function ManufacturerDashboard() {
               <div className="mt-4 pt-4 border-t border-gray-100">
                 {product.txHash && (
                   <p className="text-xs text-gray-400 font-mono mb-4">
-                    On-chain TX: {product.txHash} · Block #{product.blockNumber}
+                    On-chain TX: {product.txHash}{product.blockNumber != null ? ` · Block #${product.blockNumber}` : ""}
                   </p>
                 )}
                 <SupplyChainTimeline events={product.supplyChainEvents ?? []} />
